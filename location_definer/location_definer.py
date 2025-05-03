@@ -3,17 +3,104 @@ from typing import List, Set, Optional
 
 # stub mappings — replace with your real lookups
 REGION_TO_COUNTRIES = {
-    "Europe": ["Turkey", "Belarus", "France", "Germany"],
-    "Asia":   ["Japan", "China", "India"],
+    "Africa": [
+        "Algeria", "Angola", "Benin", "Botswana", "Burkina Faso", "Burundi",
+        "Cabo Verde", "Cameroon", "Central African Republic", "Chad", "Comoros",
+        "Congo", "Côte d'Ivoire", "Democratic Republic of the Congo", "Djibouti",
+        "Equatorial Guinea", "Eritrea", "Eswatini", "Ethiopia", "Gabon",
+        "Gambia", "Ghana", "Guinea", "Guinea-Bissau", "Kenya", "Lesotho", "Liberia",
+        "Libya", "Madagascar", "Malawi", "Mali", "Mauritania", "Mauritius",
+        "Morocco", "Mozambique", "Namibia", "Niger", "Nigeria", "Rwanda",
+        "Sao Tome and Principe", "Senegal", "Seychelles", "Sierra Leone", "Somalia",
+        "South Africa", "South Sudan", "Sudan", "Tanzania", "Togo", "Tunisia",
+        "Uganda", "Zambia", "Zimbabwe"
+    ],
+    "MiddleEast": [
+        "Bahrain", "Cyprus", "Egypt", "Iran", "Iraq", "Israel", "Jordan",
+        "Kuwait", "Lebanon", "Oman", "Palestine", "Qatar", "Saudi Arabia",
+        "Syria", "Turkey", "United Arab Emirates", "Yemen"
+    ],
+    "Asia": [
+        "Afghanistan", "Armenia", "Azerbaijan", "Bangladesh", "Bhutan", "Brunei",
+        "Cambodia", "China", "Georgia", "India", "Indonesia", "Japan", "Kazakhstan",
+        "Kyrgyzstan", "Laos", "Malaysia", "Maldives", "Mongolia", "Myanmar",
+        "Nepal", "North Korea", "Pakistan", "Philippines", "Singapore",
+        "South Korea", "Sri Lanka", "Taiwan", "Tajikistan", "Thailand",
+        "Timor-Leste", "Turkmenistan", "Uzbekistan", "Vietnam"
+    ],
+    "Europe": [
+        "Albania", "Andorra", "Austria", "Belarus", "Belgium",
+        "Bosnia and Herzegovina", "Bulgaria", "Croatia", "Czech Republic", "Denmark",
+        "Estonia", "Finland", "France", "Germany", "Greece", "Hungary", "Iceland",
+        "Ireland", "Italy", "Kosovo", "Latvia", "Liechtenstein", "Lithuania",
+        "Luxembourg", "Malta", "Moldova", "Monaco", "Montenegro", "Netherlands",
+        "North Macedonia", "Norway", "Poland", "Portugal", "Romania", "Russia",
+        "San Marino", "Serbia", "Slovakia", "Slovenia", "Spain", "Sweden",
+        "Switzerland", "Ukraine", "United Kingdom", "Vatican City"
+    ],
+    "NorthAmerica": [
+        "Antigua and Barbuda", "Bahamas", "Barbados", "Belize", "Canada",
+        "Costa Rica", "Cuba", "Dominica", "Dominican Republic", "El Salvador",
+        "Grenada", "Guatemala", "Haiti", "Honduras", "Jamaica", "Mexico",
+        "Nicaragua", "Panama", "Saint Kitts and Nevis", "Saint Lucia",
+        "Saint Vincent and the Grenadines", "Trinidad and Tobago", "United States"
+    ],
+    "SouthAmerica": [
+        "Argentina", "Bolivia", "Brazil", "Chile", "Colombia", "Ecuador",
+        "Guyana", "Paraguay", "Peru", "Suriname", "Uruguay", "Venezuela"
+    ],
+    "Oceania": [
+        "Australia", "Fiji", "Kiribati", "Marshall Islands", "Micronesia",
+        "Nauru", "New Zealand", "Palau", "Papua New Guinea", "Samoa",
+        "Solomon Islands", "Tonga", "Tuvalu", "Vanuatu"
+    ]
 }
-COUNTRY_TO_CITIES = {
-    "Turkey":  ["Istanbul", "Ankara", "Izmir"],
-    "Belarus": ["Minsk", "Brest", "Grodno"],
-    "France":  ["Paris", "Lyon", "Marseille"],
-    "Germany": ["Berlin", "Munich", "Frankfurt"],
-    "Japan":   ["Tokyo", "Osaka"],
-    # …
-}
+
+
+# pip install geonamescache
+
+import geonamescache
+
+gc = geonamescache.GeonamesCache()
+
+# Get a dict of all countries by ISO2 code
+countries = gc.get_countries()  # e.g. {'TR': {'name': 'Turkey', ...}, ...}
+
+# Get a dict of all cities keyed by city ID, including their country codes
+cities = gc.get_cities()  # e.g. {'379252': {'name': 'Istanbul', 'countrycode': 'TR', ...}, ...}
+
+# Build COUNTRY_TO_CITIES mapping
+COUNTRY_TO_CITIES = {}
+for country_iso, cinfo in countries.items():
+    country_name = cinfo['name']
+    # Collect all cities whose countrycode matches this ISO
+    city_list = [
+        city['name'] for city in cities.values()
+        if city['countrycode'] == country_iso
+    ]
+    # Optionally: sort, dedupe, and take only the top N largest cities, etc.
+    COUNTRY_TO_CITIES[country_name] = sorted(set(city_list))
+
+# Example output snippet
+# print({k: COUNTRY_TO_CITIES[k][:5] for k in ['Turkey', 'Belarus', 'France', 'Germany', 'Japan']})
+# {
+#   'Turkey': ['Adana', 'Afyonkarahisar', 'Ağrı', 'Amasya', 'Ankara'],
+#   'Belarus': ['Barysaw', 'Brest', 'Gomel', 'Grodno', 'Minsk'],
+#   ...
+# }
+
+
+
+
+
+# COUNTRY_TO_CITIES = {
+#     "Turkey":  ["Istanbul", "Ankara", "Izmir"],
+#     "Belarus": ["Minsk", "Brest", "Grodno"],
+#     "France":  ["Paris", "Lyon", "Marseille"],
+#     "Germany": ["Berlin", "Munich", "Frankfurt"],
+#     "Japan":   ["Tokyo", "Osaka"],
+#     # …
+# }
 
 
 class Location(ABC):
@@ -73,7 +160,7 @@ class Region(Location):
         return cities
 
 
-class LocationFilter:
+class LocationDefiner:
     """
     Holds your top-level geography spec:
       - regions
